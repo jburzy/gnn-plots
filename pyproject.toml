@@ -1,0 +1,27 @@
+[project]
+name = "gnn-plots"
+version = "0.1"
+description = "Plotting scripts for GNNs"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+
+[project.urls]
+"Homepage" = "https://github.com/jburzy/gnn-plots"
+
+[project.scripts]
+gnn-plots = "plotter.main:main"
+
+[tool.setuptools]
+packages = ["plotter"]
+
+[build-system]
+requires = ["setuptools>=62"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+preview = "True"
+
+[tool.pytest.ini_options]
+log_cli_level = "debug"
+filterwarnings = ["ignore::DeprecationWarning"]
