@@ -4,6 +4,7 @@ version = "0.1"
 description = "Plotting scripts for GNNs"
 license = {text = "MIT"}
 requires-python = ">=3.9"
+dynamic = ["dependencies"]
 
 [project.urls]
 "Homepage" = "https://github.com/jburzy/gnn-plots"
@@ -13,6 +14,9 @@ gnn-plots = "plotter.main:main"
 
 [tool.setuptools]
 packages = ["plotter"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
 
 [build-system]
 requires = ["setuptools>=62"]
