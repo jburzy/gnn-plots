@@ -32,3 +32,4 @@ user/
 .coverage*
 .cometml-runs
 *.png
+*scratchwork.txt
