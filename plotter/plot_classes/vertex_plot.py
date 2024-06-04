@@ -4,7 +4,9 @@ import h5py
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib import gridspec as gridspec
 from plotter.plot_classes.plotbase import PlotBase
+
 
 def make_VImats(true_vi, pred_vi, pred_pileup, pred_fake, pred_prompt, pred_disp):
     """
@@ -59,7 +61,7 @@ def make_VImats(true_vi, pred_vi, pred_pileup, pred_fake, pred_prompt, pred_disp
 
         # checking if predicted origin is pilup or fake
         if (origin == pu) or (origin == fk):
-            mat_pred[i][i] == 0
+            mat_pred[i][i] = 0
 
         # checking if predicted origin is prompt
         elif (origin == pr) or (origin == dp):
@@ -77,25 +79,19 @@ def make_VImats(true_vi, pred_vi, pred_pileup, pred_fake, pred_prompt, pred_disp
 class VertexPlotBase(PlotBase):
     def plot(self):
         """
-        VertexPlotBase subclass version of plot to plot the vertex index matrices for both true
+        VertexPlotBase subclass of PlotBase to plot the vertex index matrices for both true
         and predicted.
         """
+
         # required parameters for vertex index plot base. Set in 'style' key in config
         required_params = {
-            'xlabel',
-            'ylabel',
-            'atlas_second_tag',
             'figsize',
-            'y_scale',
             'fontsize',
             'label_fontsize',
             'dpi',
             'show_entries',
             'show_percentages',
             'text_color_threshold',
-            'colormap',
-            'cbar_label',
-            'use_atlas_tag'
         }
 
         # filter only the necessary parameters from the config file to plot the vertex matrix
@@ -103,11 +99,20 @@ class VertexPlotBase(PlotBase):
             key: value for key, value in self.config.style.items() if key in required_params
         }
 
-        # constructing vertex index matrices for both truth and model prediction
+        # extracting sample details and storing as a dictionary
         sample = ConfigDict(self.config.samples)
+
+        # extracting data and processing it
         with h5py.File(sample.path, "r") as hdf_file:
             jet_num = self.config.jet_num
 
+            # extract jet information
+            ds_jet = hdf_file['jets']
+            truth_isDisp = ds_jet['isDisplaced'][jet_num]
+            keys_list = list(ds_jet.dtype.fields.keys())
+            prob_isDisp = ds_jet[keys_list[-2]][jet_num]
+
+            # extract track information
             ds_tfj = hdf_file[sample.df_name]
 
             # boolean array of valid tracks
@@ -126,7 +131,7 @@ class VertexPlotBase(PlotBase):
             pred_prompt_data = ds_tfj['prompt'][jet_num][valid]
             pred_disp_data = ds_tfj['displaced'][jet_num][valid]
 
-            # take valid tracks from truth origin label (i.e. tracks not coming from -1 entry) and sort
+            # sort
             sorted_indices = np.argsort(true_vi_data)
 
             # sort both true and predicted arrays based on sorted truth vertex index array
@@ -150,96 +155,112 @@ class VertexPlotBase(PlotBase):
                 pred_disp
             )
 
-        # tick positions and labels (x and y share same labels)
-        xyticks = np.arange(0,n,5)
-        xyticks_labels = []
-        for i in range(n):
-            if i%5 == 0:
-                xyticks_labels.append(str(i))
-            else:
-                xyticks_labels.append(" ")
+        # construct the plot
+        fig = plt.figure(figsize=filtered_params['figsize'], dpi=filtered_params['dpi'],)
+        gs = gridspec.GridSpec(1,2)
 
-        # create plot base for truth vertex index matrix
-        true_vi_plot = MatshowPlot(
-            x_ticklabels=xyticks_labels,
-            x_ticks_rotation=0,
-            y_ticklabels=xyticks_labels,
-            show_entries=filtered_params['show_entries'],
-            show_percentage=filtered_params['show_percentages'],
-            colormap=filtered_params['colormap'],
-            text_color_threshold=filtered_params['text_color_threshold'],
-            cbar_label=filtered_params['cbar_label'],
-            xlabel=rf"{filtered_params['xlabel']}",
-            ylabel=rf"{filtered_params['ylabel']}",
-            fontsize=filtered_params['fontsize'],
-            label_fontsize=filtered_params['label_fontsize'],
-            figsize=filtered_params['figsize'],
-            dpi=filtered_params['dpi'],
-            use_atlas_tag=filtered_params['use_atlas_tag']
-        )
+        # creating the subplots
+        ax_true = fig.add_subplot(gs[0,0])
+        ax_pred = fig.add_subplot(gs[0,1])
 
-        # draw true vertex index matrix
-        true_vi_plot.draw(mat_true)
+        # plotting the truth and predicted vertex index matrices
+        ax_true.imshow(mat_true, cmap='gray')
+        ax_pred.imshow(mat_pred, cmap='gray')
+
+        # adjust the scatterplot sizes depending on number of valid tracks
+        if n < 60:
+            size = 1200/n
+        elif (n>=60) and (n<120):
+            size = 600/n
+        else:
+            size = 300/n
 
         colors = ['gray', 'darkred', 'forestgreen', 'deepskyblue']
+        # initialize labels to keep track of what label has been applied to the legend
+        labels = []
 
-        # add origin information to truth vertex index matrix
+        # plot the truth origin labels
         for i in range(n):
             if true_origin[i] == 0:
-                true_vi_plot.axis_top.scatter(i, i, color=colors[0], marker='o', s=30)
+                if 'pileup' not in labels:
+                    labels.append('pileup')
+                    ax_true.scatter(i, i, color=colors[0], marker='o', s=size, label='pileup')
+                else:
+                    ax_true.scatter(i, i, color=colors[0], marker='o', s=size)
             elif true_origin[i] == 1:
-                true_vi_plot.axis_top.scatter(i, i, color=colors[1], marker='o', s=30)
+                if 'fake' not in labels:
+                    labels.append('fake')
+                    ax_true.scatter(i, i, color=colors[1], marker='o', s=size, label='fake')
+                else:
+                    ax_true.scatter(i, i, color=colors[1], marker='o', s=size)
             elif true_origin[i] == 2:
-                true_vi_plot.axis_top.scatter(i, i, color=colors[2], marker='o', s=30)
+                if 'prompt' not in labels:
+                    labels.append('prompt')
+                    ax_true.scatter(i, i, color=colors[2], marker='o', s=size, label='prompt')
+                else:    
+                    ax_true.scatter(i, i, color=colors[2], marker='o', s=size)
             elif true_origin[i] == 3:
-                true_vi_plot.axis_top.scatter(i, i, color=colors[3], marker='o', s=30)
+                if 'displaced' not in labels:
+                    labels.append('displaced')
+                    ax_true.scatter(i, i, color=colors[3], marker='o', s=size, label='displaced')
+                else:
+                    ax_true.scatter(i, i, color=colors[3], marker='o', s=size)
             else:
                 print("ERROR: write an error message later")
-
-        # set title
-        true_vi_plot.set_title(f"Truth Vertex Index Matrix, Jet {jet_num}")
-        
-        # # Saving the plot
-        true_vi_plot.savefig(f"jet{jet_num}-trueVImatrix")
-
-        # create plot base for predicted vertex index matrix
-        pred_vi_plot = MatshowPlot(
-            x_ticklabels=xyticks_labels,
-            x_ticks_rotation=0,
-            y_ticklabels=xyticks_labels,
-            show_entries=filtered_params['show_entries'],
-            show_percentage=filtered_params['show_percentages'],
-            colormap=filtered_params['colormap'],
-            text_color_threshold=filtered_params['text_color_threshold'],
-            cbar_label=filtered_params['cbar_label'],
-            xlabel=rf"{filtered_params['xlabel']}",
-            ylabel=rf"{filtered_params['ylabel']}",
-            fontsize=filtered_params['fontsize'],
-            label_fontsize=filtered_params['label_fontsize'],
-            figsize=filtered_params['figsize'],
-            dpi=filtered_params['dpi'],
-            use_atlas_tag=filtered_params['use_atlas_tag']
-        )
-
-        # draw true vertex index matrix
-        pred_vi_plot.draw(mat_pred)
 
         # add origin information to truth vertex index matrix
         for i, (pu, fk, pr, dp) in enumerate(zip(pred_pileup, pred_fake, pred_prompt, pred_disp)):
             origin = max(pu, fk, pr, dp)
             if origin == pu:
-                pred_vi_plot.axis_top.scatter(i, i, color=colors[0], marker='o', s=30)
+                ax_pred.scatter(i, i, color=colors[0], marker='o', s=size)
             elif origin == fk:
-                pred_vi_plot.axis_top.scatter(i, i, color=colors[1], marker='o', s=30)
+                ax_pred.scatter(i, i, color=colors[1], marker='o', s=size)
             elif origin == pr:
-                pred_vi_plot.axis_top.scatter(i, i, color=colors[2], marker='o', s=30)
+                ax_pred.scatter(i, i, color=colors[2], marker='o', s=size)
             elif origin == dp:
-                pred_vi_plot.axis_top.scatter(i, i, color=colors[3], marker='o', s=30)
+                ax_pred.scatter(i, i, color=colors[3], marker='o', s=size)
             else:
                 print("ERROR: write an error message later")
 
-        # set title
-        pred_vi_plot.set_title(f"Predicted Vertex Index Matrix, Jet {jet_num}")
-            
-        # Saving the plot
-        pred_vi_plot.savefig(f"jet{jet_num}-predVImatrix")
+        # tick positions and labels (x and y share same labels)
+        if n <= 51:
+            xyticks = np.arange(0,n+1,5)
+        elif (n>51) and (n<=101):
+            xyticks = np.arange(0,n+1,10)
+        else:
+            xyticks = np.arange(0,n+1,20)
+
+        # true vertex index matrix plot settings
+        fsize = filtered_params['fontsize']
+        ax_true.set_title("Truth Labels", fontsize=fsize)
+        ax_true.set_xticks(xyticks, fontsize=fsize)
+        ax_true.set_yticks(xyticks, fontsize=fsize)
+        ax_true.set_xlabel(r"$n_{track}$", fontsize=fsize)
+        ax_true.set_ylabel(r"$n_{track}$", fontsize=fsize)
+        ax_true.legend(loc="upper right", fontsize=fsize-3)
+
+        # predicted vertex index matrix plot settings
+        ax_pred.set_title("GN2ej Prediction", fontsize=fsize)
+        ax_pred.set_xticks(xyticks, fontsize=fsize)
+        ax_pred.set_yticks(xyticks, fontsize=fsize)
+        ax_pred.set_xlabel(r"$n_{track}$", fontsize=fsize)
+        ax_pred.set_ylabel(r"$n_{track}$", fontsize=fsize)
+
+        # add text to figure
+        text = fig.text(0.93, 0.65, "Sample Jet {0}"
+            "\n"
+            "\n"
+            "Truth {1} Jet"
+            "\n"
+            "\n"
+            r"$P_{{EJ}}=${2:.3f}".format(jet_num, "Emerging" if truth_isDisp == 1 else "Prompt", prob_isDisp),
+            va='top', ha='center', fontsize=fsize-3, backgroundcolor='gray', alpha=1,
+
+        )
+        text.set_bbox(dict(facecolor='gray', alpha=0.25, linewidth=0))
+
+        plt.tight_layout(rect=[0,0,0.86,1])
+
+        plt.savefig(f"jet{jet_num}-VImatrices.png", dpi=filtered_params['dpi'], bbox_inches='tight')
+
+
