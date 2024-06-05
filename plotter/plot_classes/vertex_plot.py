@@ -61,7 +61,18 @@ def make_VImats(true_vi, pred_vi, pred_pileup, pred_fake, pred_prompt, pred_disp
 
         # checking if predicted origin is pilup or fake
         if (origin == pu) or (origin == fk):
-            mat_pred[i][i] = 0
+            # still have to check if these tracks are predicted to pair with other tracks
+            pair = False
+            for j in range(n):
+                if pred_vi[j] == pred_vi[i]:
+                    mat_pred[i][j] = 0
+                    pair = True
+            if pair == True:
+                # give it a different value from 0 to distinguish
+                # NOTE: THIS IS HERE IF I WANT TO ADD ANOTHER ITEM IN THE LEGEND FOR SHOWING THIS CASE
+                mat_pred[i][i] = 0.01
+            else:
+                mat_pred[i][i] = 0
 
         # checking if predicted origin is prompt
         elif (origin == pr) or (origin == dp):
@@ -102,7 +113,8 @@ class VertexPlotBase(PlotBase):
         # extracting sample details and storing as a dictionary
         sample = ConfigDict(self.config.samples)
 
-        # extracting data and processing it
+        # EXTRACTING THE DATA AND PROCESS IT
+        # ----------------------------------
         with h5py.File(sample.path, "r") as hdf_file:
             jet_num = self.config.jet_num
 
@@ -111,6 +123,8 @@ class VertexPlotBase(PlotBase):
             truth_isDisp = ds_jet['isDisplaced'][jet_num]
             keys_list = list(ds_jet.dtype.fields.keys())
             prob_isDisp = ds_jet[keys_list[-2]][jet_num]
+            jet_pt = ds_jet['pt'][jet_num]/1000     # jet transverse momentum in GeV
+            jet_eta = ds_jet['eta'][jet_num]
 
             # extract track information
             ds_tfj = hdf_file[sample.df_name]
@@ -155,7 +169,8 @@ class VertexPlotBase(PlotBase):
                 pred_disp
             )
 
-        # construct the plot
+        # CONSTRUCTING THE FIGURE AND PLOTTING THE MATRICES
+        # -------------------------------------------------
         fig = plt.figure(figsize=filtered_params['figsize'], dpi=filtered_params['dpi'],)
         gs = gridspec.GridSpec(1,2)
 
@@ -167,6 +182,9 @@ class VertexPlotBase(PlotBase):
         ax_true.imshow(mat_true, cmap='gray')
         ax_pred.imshow(mat_pred, cmap='gray')
 
+
+        # ADJUSTING PLOT SETTINGS
+        # -----------------------
         # adjust the scatterplot sizes depending on number of valid tracks
         if n < 60:
             size = 1200/n
@@ -208,17 +226,36 @@ class VertexPlotBase(PlotBase):
             else:
                 print("ERROR: write an error message later")
 
+        # initialize labels to keep track of what label has been applied to the legend
+        labels = []
+
         # add origin information to truth vertex index matrix
         for i, (pu, fk, pr, dp) in enumerate(zip(pred_pileup, pred_fake, pred_prompt, pred_disp)):
             origin = max(pu, fk, pr, dp)
             if origin == pu:
-                ax_pred.scatter(i, i, color=colors[0], marker='o', s=size)
+                if 'pileup' not in labels:
+                    labels.append('pileup')
+                    ax_pred.scatter(i, i, color=colors[0], marker='o', s=size, label='pileup')
+                else:
+                    ax_pred.scatter(i, i, color=colors[0], marker='o', s=size)
             elif origin == fk:
-                ax_pred.scatter(i, i, color=colors[1], marker='o', s=size)
+                if 'fake' not in labels:
+                    labels.append('fake')
+                    ax_pred.scatter(i, i, color=colors[1], marker='o', s=size, label='fake')
+                else:
+                    ax_pred.scatter(i, i, color=colors[1], marker='o', s=size)
             elif origin == pr:
-                ax_pred.scatter(i, i, color=colors[2], marker='o', s=size)
+                if 'prompt' not in labels:
+                    labels.append('prompt')
+                    ax_pred.scatter(i, i, color=colors[2], marker='o', s=size, label='prompt')
+                else:
+                    ax_pred.scatter(i, i, color=colors[2], marker='o', s=size)
             elif origin == dp:
-                ax_pred.scatter(i, i, color=colors[3], marker='o', s=size)
+                if 'displaced' not in labels:
+                    labels.append('displaced')
+                    ax_pred.scatter(i, i, color=colors[3], marker='o', s=size, label='displaced')
+                else:
+                    ax_pred.scatter(i, i, color=colors[3], marker='o', s=size)
             else:
                 print("ERROR: write an error message later")
 
@@ -237,7 +274,6 @@ class VertexPlotBase(PlotBase):
         ax_true.set_yticks(xyticks, fontsize=fsize)
         ax_true.set_xlabel(r"$n_{track}$", fontsize=fsize)
         ax_true.set_ylabel(r"$n_{track}$", fontsize=fsize)
-        ax_true.legend(loc="upper right", fontsize=fsize-3)
 
         # predicted vertex index matrix plot settings
         ax_pred.set_title("GN2ej Prediction", fontsize=fsize)
@@ -247,20 +283,37 @@ class VertexPlotBase(PlotBase):
         ax_pred.set_ylabel(r"$n_{track}$", fontsize=fsize)
 
         # add text to figure
-        text = fig.text(0.93, 0.65, "Sample Jet {0}"
+        text = fig.text(0.94, 0.35, "Sample Jet {0}"
             "\n"
             "\n"
             "Truth {1} Jet"
             "\n"
             "\n"
-            r"$P_{{EJ}}=${2:.3f}".format(jet_num, "Emerging" if truth_isDisp == 1 else "Prompt", prob_isDisp),
-            va='top', ha='center', fontsize=fsize-3, backgroundcolor='gray', alpha=1,
-
+            r"Jet $p_{{T}}={2:.1f}$ GeV"
+            "\n"
+            "\n"
+            r"Jet $\eta={3:.3f}$"
+            "\n"
+            "\n"
+            r"$P_{{EJ}}=${4:.3f}".format(jet_num, "Signal" if truth_isDisp == 1 else "QCD", jet_pt, 
+                jet_eta, prob_isDisp), ha='center', fontsize=fsize-3, backgroundcolor='gray', alpha=1,
         )
-        text.set_bbox(dict(facecolor='gray', alpha=0.25, linewidth=0))
+        # adjust border box of text
+        text.set_bbox(dict(boxstyle='round', facecolor='gray', alpha=0.25, linewidth=0))
+
+        # retrieve handles and labels for each plot
+        handles, labels = ax_true.get_legend_handles_labels()
+        handles_pred, labels_pred = ax_pred.get_legend_handles_labels()
+        # append predicted matrix plot labels into labels if they are not already present
+        for i, label in enumerate(labels_pred):
+            if label not in labels:
+                handles.append(handles_pred[i])
+                labels.append(labels_pred[i])
+
+        fig.legend(handles=handles, labels=labels, fontsize=fsize-3, loc='lower center', 
+            bbox_to_anchor=(0.45,-0.03), fancybox=True, shadow=True, ncol=len(handles))
 
         plt.tight_layout(rect=[0,0,0.86,1])
 
         plt.savefig(f"jet{jet_num}-VImatrices.png", dpi=filtered_params['dpi'], bbox_inches='tight')
-
 
