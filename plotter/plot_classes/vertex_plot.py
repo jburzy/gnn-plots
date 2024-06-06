@@ -113,6 +113,7 @@ class VertexPlotBase(PlotBase):
         # extracting sample details and storing as a dictionary
         sample = ConfigDict(self.config.samples)
 
+
         # EXTRACTING THE DATA AND PROCESS IT
         # ----------------------------------
         with h5py.File(sample.path, "r") as hdf_file:
@@ -136,8 +137,6 @@ class VertexPlotBase(PlotBase):
             true_vi_data = ds_tfj['truthVertexIndex'][jet_num][valid]
             pred_vi_data = ds_tfj['VertexIndex'][jet_num][valid]
 
-            n = len(true_vi_data)
-
             # extract valid origin labels
             true_origin_data = ds_tfj['truthOriginLabel'][jet_num][valid]
             pred_pileup_data = ds_tfj['pileup'][jet_num][valid]
@@ -159,6 +158,22 @@ class VertexPlotBase(PlotBase):
             pred_prompt = pred_prompt_data[sorted_indices]
             pred_disp = pred_disp_data[sorted_indices]
 
+            # set the view: two options are global and closeup
+            if self.config.zoom:
+                # adjust matrices based on when no pileup tracks are in truth sample
+                for i in range(len(true_vi)):
+                    if true_vi[i] != -2:
+                        true_vi = true_vi[i:]
+                        pred_vi = pred_vi[i:]
+                        true_origin = true_origin[i:]
+                        pred_pileup = pred_pileup[i:]
+                        pred_fake = pred_fake[i:]
+                        pred_prompt = pred_prompt[i:]
+                        pred_disp = pred_disp[i:]
+                        break
+
+            n = len(true_vi)
+
             # create vertex index matrices
             mat_true, mat_pred = make_VImats(
                 true_vi, 
@@ -168,6 +183,7 @@ class VertexPlotBase(PlotBase):
                 pred_prompt,
                 pred_disp
             )
+
 
         # CONSTRUCTING THE FIGURE AND PLOTTING THE MATRICES
         # -------------------------------------------------
@@ -186,7 +202,9 @@ class VertexPlotBase(PlotBase):
         # ADJUSTING PLOT SETTINGS
         # -----------------------
         # adjust the scatterplot sizes depending on number of valid tracks
-        if n < 60:
+        if n <= 30:
+            size = 1600/n
+        elif (n > 30) and (n < 60):
             size = 1200/n
         elif (n>=60) and (n<120):
             size = 600/n
@@ -315,5 +333,8 @@ class VertexPlotBase(PlotBase):
 
         plt.tight_layout(rect=[0,0,0.86,1])
 
-        plt.savefig(f"jet{jet_num}-VImatrices.png", dpi=filtered_params['dpi'], bbox_inches='tight')
+        if self.config.zoom:
+            plt.savefig(f"jet{jet_num}-VImatrices_zoom.png", dpi=filtered_params['dpi'], bbox_inches='tight')
+        else:
+            plt.savefig(f"jet{jet_num}-VImatrices.png", dpi=filtered_params['dpi'], bbox_inches='tight')
 
