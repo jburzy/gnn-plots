@@ -32,3 +32,6 @@ user/
 .coverage*
 .cometml-runs
 *.png
+*scratchwork.txt
+*gnn-plots-ssh
+*gnn-plots-ssh.pub
