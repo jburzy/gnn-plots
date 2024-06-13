@@ -1,0 +1,36 @@
+output_dir: output
+
+samples: &samples
+  GN2ej:
+    path: '/path/to/your/file'
+    label: 'GN2ej'
+    reference: True
+    df_name: jets
+  GN2ej_2ndCurve:
+    path: '/path/to/your/file_2ndCurve'
+    label: 'GN2ej_2ndCurve'
+    reference: False
+    df_name: jets
+
+style: &style
+  ylabel: ""
+  xlabel: ""
+  figsize: !!python/tuple [8, 6]  # figure sizes in this range work best
+  atlas_second_tag: "$\\sqrt{{s}}=13.6$ TeV"
+  y_scale: 1.0
+
+plots:
+  roc:
+    class: plotter.plot_classes.roc_plot.RocPlotBase
+    samples: *samples
+    file_name: roc.png
+    target_label: isDisplaced
+    range: !!python/tuple [0.95, 1, 100]
+    show_cuts: True  # choose whether to display your desired cuts
+    cut_values: [0.96, 0.98, 0.99]  # or None
+    style:
+      <<: *style
+      n_ratio_panels: 1
+      ylabel: "QCD rejection"
+      xlabel: "EJ efficiency"
+      y_scale: 1.4
