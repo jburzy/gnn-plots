@@ -1,0 +1,34 @@
+output_dir: output
+
+samples: &samples
+  GN2ej:
+    path: '/home/randon_h/gnnej/gnn-plots/data/epoch=008-val_loss=0.02631__test_pp_output_val.h5'
+    label: 'GN2ej sample'
+
+style: &style
+  ylabel: ""
+  xlabel: ""
+  figsize: !!python/tuple [6, 6]
+  use_atlas_tag: True
+  atlas_second_tag: "$\\sqrt{{s}}=13.6$ TeV"
+  y_scale: 1.0
+  fontsize: 15
+  label_fontsize: 15
+  dpi: 300
+
+plots:
+  jetpt_perf:
+    class: plotter.plot_classes.jetpt_perf_plot.JetPtPerfPlotBase
+    samples: *samples
+    sig_eff_filename: EJ_eff_vs_jetpT.png
+    bkg_rej_filename: QCD_rej_vs_jetpT.png
+    working_point: 0.95
+    binedges: [0.2,0.3,0.4,0.5,0.6,0.8,1.2,2.25]  # in TeV
+    sig_eff_leg_loc: lower right
+    bkg_rej_leg_loc: upper right
+    style:
+      <<: *style
+      grid: True
+      figsize: !!python/tuple [7,5]
+      y_scale: 1.0
+      atlas_tag_outside: True
