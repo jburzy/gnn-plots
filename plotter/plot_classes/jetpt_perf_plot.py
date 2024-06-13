@@ -30,7 +30,7 @@ class JetPtPerfPlotBase(PlotBase):
 		plot_sig_eff = VarVsEffPlot(
 			mode="sig_eff",
 			ylabel="Emerging jet efficiency",
-			xlabel=r"$p_{T}$ [GeV]",
+			xlabel=r"$p_{T}$ [TeV]",
 			logy=False,
 			**filtered_params
 		)
@@ -38,7 +38,7 @@ class JetPtPerfPlotBase(PlotBase):
 		plot_bkg_rej = VarVsEffPlot(
 			mode="bkg_rej",
 			ylabel="QCD jet rejection",
-			xlabel=r"$p_{T}$ [GeV]",
+			xlabel=r"$p_{T}$ [TeV]",
 			logy=False,
 			**filtered_params
 		)
@@ -47,7 +47,6 @@ class JetPtPerfPlotBase(PlotBase):
 		# OPEN OUTPUT DATA FILE AND PROCESS IT
 		# ------------------------------------
 		for _, sample in self.config.samples.items():
-			print(sample)
 			sample_config = ConfigDict(sample)
 			with h5py.File(sample_config.path, "r") as hdf_file:
 				ds_jet = hdf_file["jets"]
@@ -64,7 +63,7 @@ class JetPtPerfPlotBase(PlotBase):
 				# extract pDisp, pPrompt, and jet p_T, store in pandas dataframe
 				df = pd.DataFrame(
 					{
-						"pt": np.array(ds_jet["pt"])/1000, # jet p_T in GeV
+						"pt": np.array(ds_jet["pt"])/1e6, # jet p_T in TeV
 						"isDisplaced": np.array(ds_jet["isDisplaced"]),
 						pDisp: np.array(ds_jet[pDisp]),
 						pPrompt: np.array(ds_jet[pPrompt])
@@ -78,28 +77,7 @@ class JetPtPerfPlotBase(PlotBase):
 				is_disp = df["isDisplaced"] == 1
 				is_prompt = df["isDisplaced"] == 0
 
-				pt = df["pt"].values	# jet p_T in GeV
-
-
-				# CREATE BINS
-				# -----------
-				factor = self.config.factor # factor by which each bin increases in size
-
-				lowest_pT = np.min(df['pt'].values)
-				highest_pT = np.max(df[is_disp]['pt'].values)
-
-				# create bin edges array and keep track of current edge
-				binedges = [lowest_pT, lowest_pT+self.config.starting_bin_width]
-				current_edge = binedges[-1]
-
-				# calculate all bin edges
-				j = 0
-				while current_edge < highest_pT:
-					current_edge += (binedges[j+1]-binedges[j])*(factor)
-					binedges.append(current_edge)
-					j += 1
-
-				print(binedges)
+				pt = df["pt"].values	# jet p_T in TeV
 
 
 				# DEFINE THE CURVES
@@ -109,11 +87,10 @@ class JetPtPerfPlotBase(PlotBase):
 					disc_sig = discs_gnn[is_disp].values,
 					x_var_bkg = pt[is_prompt],
 					disc_bkg = discs_gnn[is_prompt].values,
-					bins = binedges,
+					bins = self.config.binedges,
 					working_point = None,
 					disc_cut = wp,
 					label = sample_config.label,
-					colour = sample_config.colour,
 					linewidth = 1.2
 				)
 
@@ -121,16 +98,18 @@ class JetPtPerfPlotBase(PlotBase):
 				# ADD THE CURVES TO THE PLOTS
 				# ---------------------------
 				plot_sig_eff.add(gnn_ej, reference=True)
+				plot_sig_eff.leg_loc = self.config.sig_eff_leg_loc
 				plot_sig_eff.atlas_second_tag += f", Score > {wp}"
 
 				plot_bkg_rej.add(gnn_ej, reference=True)
+				plot_bkg_rej.leg_loc = self.config.bkg_rej_leg_loc
 				plot_bkg_rej.atlas_second_tag += f", Score > {wp}"
 
 
 		# DRAW AND SAVE THE PLOTS
 		# -----------------------
 		plot_sig_eff.draw()
-		plot_sig_eff.savefig("EJ_eff_vs_jetpT.png", transparent=False)
+		plot_sig_eff.savefig(self.config.sig_eff_filename, transparent=False)
 
 		plot_bkg_rej.draw()
-		plot_bkg_rej.savefig("QCD_rej_vs_jetpT.png", transparent=False)
+		plot_bkg_rej.savefig(self.config.bkg_rej_filename, transparent=False)
