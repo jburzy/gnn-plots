@@ -89,16 +89,6 @@ class NumVertPerfPlotBase(PlotBase):
 
 				num_vertices = np.asarray(num_vertices)
 
-				# CREATE BINS
-				# -----------
-				min_num = 0
-				max_num = np.max(num_vertices)
-
-				bw = self.config.bin_width	# bin width defined in config file
-				
-				# calculate binedges
-				binedges = np.arange(min_num, max_num+1 if max_num%2 == 0 else max_num+2, bw)
-
 
 				# DEFINE THE CURVES
 				# -----------------
@@ -107,30 +97,31 @@ class NumVertPerfPlotBase(PlotBase):
 					disc_sig = discs_gnn[is_disp].values,
 					x_var_bkg = num_vertices[is_prompt],
 					disc_bkg = discs_gnn[is_prompt].values,
-					bins = binedges,
+					bins = self.config.binedges,
 					working_point = None,
 					disc_cut = wp,
 					label = sample_config.label,
-					colour = sample_config.colour,
 					linewidth = 1.2
 				)
 
 
 				# ADD THE CURVES TO THE PLOTS
 				# ---------------------------
-				plot_sig_eff.add(gnn_ej, reference=True)
+				plot_sig_eff.add(gnn_ej)
+				plot_sig_eff.leg_loc = self.config.sig_eff_leg_loc
 				plot_sig_eff.atlas_second_tag += f", Score > {wp}"
 
-				plot_bkg_rej.add(gnn_ej, reference=True)
+				plot_bkg_rej.add(gnn_ej)
+				plot_bkg_rej.leg_loc = self.config.bkg_rej_leg_loc
 				plot_bkg_rej.atlas_second_tag += f", Score > {wp}"
 
 
 		# DRAW AND SAVE THE PLOTS
 		plot_sig_eff.draw()
-		plot_sig_eff.savefig("EJ_eff_vs_NumVert.png", transparent=False)
+		plot_sig_eff.savefig(self.config.sig_eff_filename, transparent=False)
 
 		plot_bkg_rej.draw()
-		plot_bkg_rej.savefig("QCD_rej_vs_NumVert.png", transparent=False)
+		plot_bkg_rej.savefig(self.config.bkg_rej_filename, transparent=False)
 
 
 
@@ -221,7 +212,7 @@ class NumVertComparePlotBase(PlotBase):
 			h = ax_main.hist2d(
 				true_num_vert, 
 				pred_num_vert, 
-				bins=[np.arange(0,max(true_num_vert)+1,1), np.arange(0,max(pred_num_vert)+1,1)],
+				bins=[np.arange(-0.5,max(true_num_vert)+1.5,1), np.arange(-0.5,max(pred_num_vert)+1.5,1)],
 				cmap="turbo",
 				density=True
 			)
@@ -232,47 +223,50 @@ class NumVertComparePlotBase(PlotBase):
 			)
 
 			# main plot settings
-			xyticks = np.arange(0,26,5)
+			max_val = self.config.max_val
+			xyticks = np.arange(0,max_val+1,5)
 
-			ax_main.set_xlim(0,25)
-			ax_main.set_ylim(0,25)
+			ax_main.set_xlim(0,max_val)
+			ax_main.set_ylim(0,max_val)
 
 			ax_main.set_xticks(xyticks, fontsize=filtered_params["fontsize"])
 			ax_main.set_yticks(xyticks, fontsize=filtered_params["fontsize"])
 			ax_main.set_xlabel("True number of vertices", fontsize=filtered_params["fontsize"])
 			ax_main.set_ylabel("Predicted number of vertices", fontsize=filtered_params["fontsize"])
-			# fig.colorbar(h[3]) THE COLORBAR DOES NOT FIT WELL ON THE PLOT
+			ax_main.minorticks_on()
 
 
 			# PLOT THE TRUE VERTEX INDICES HISTOGRAM
 			# --------------------------------------
 			ax_true = fig.add_subplot(gs[0,0])
 			ax_true.hist(true_num_vert, 
-				bins=np.arange(0,max(true_num_vert)+1,1), 
+				bins=np.arange(-0.5,max(true_num_vert)+1.5,1), 
 				density=True,
 				color='blue',
 				alpha=0.75
 				)
 			# true vertex histogram plot settings
-			ax_true.set_xlim(0,25)
+			ax_true.set_xlim(0,max_val)
 			ax_true.set_xticks(xyticks, fontsize=filtered_params["fontsize"])
+			ax_true.minorticks_on()
 
 
 			# PLOT THE PREDICTED VERTEX INDICES HISTOGRAM
 			# -------------------------------------------
 			ax_pred = fig.add_subplot(gs[1,1])
 			ax_pred.hist(pred_num_vert, 
-				bins=np.arange(0,max(pred_num_vert)+1,1), 
+				bins=np.arange(-0.5,max(pred_num_vert)+1.5,1), 
 				density=True,
 				orientation="horizontal", 
 				color='blue',
 				alpha=0.75)
 			# predicted vertex histogram plot settings
-			ax_pred.set_ylim(0,25)
+			ax_pred.set_ylim(0,max_val)
 			ax_pred.set_yticks(xyticks, fontsize=filtered_params["fontsize"])
+			ax_pred.minorticks_on()
 
 
-			plt.savefig("NumVertCompare.png", 
+			plt.savefig(self.config.filename, 
 				dpi=filtered_params["dpi"],
 				bbox_inches="tight",
 			)

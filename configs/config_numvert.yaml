@@ -1,0 +1,50 @@
+output_dir: output
+
+samples: &samples
+  GN2ej:
+    path: '/path/to/file'
+    label: 'GN2ej sample'
+  GN2ej_2nd:
+    path: '/path/to/file2nd'
+    label: 'GN2ej_2nd sample'
+  
+style: &style
+  ylabel: ""
+  xlabel: ""
+  figsize: !!python/tuple [7, 7]
+  leg_loc: lower right
+  use_atlas_tag: True
+  atlas_second_tag: "$\\sqrt{{s}}=13.6$ TeV"
+  y_scale: 1.0
+  fontsize: 14
+  label_fontsize: 15
+  dpi: 300
+
+plots:
+  numvert_perf:
+    class: plotter.plot_classes.num_vert_perf_plot.NumVertPerfPlotBase
+    samples: *samples
+    sig_eff_filename: EJ_eff_vs_NumVert.png
+    bkg_rej_filename: QCD_rej_vs_NumVert.png
+    working_point: 0.95
+    binedges: [0,2,4,6,8,10,14,18,25,40] # or can specify np.linspace / np.arange
+    sig_eff_leg_loc: lower right
+    bkg_rej_leg_loc: upper right
+    style:
+      <<: *style
+      grid: True
+      figsize: !!python/tuple [7,5]
+      y_scale: 1.0
+      atlas_tag_outside: True
+
+  numvert_compare:
+    class: plotter.plot_classes.num_vert_perf_plot.NumVertComparePlotBase
+    samples:  # specify specific sample here
+      path: '/path/to/file'
+      colour: mediumblue
+    filename: NumVertCompare.png
+    max_val: 25
+    style:
+      <<: *style
+      figsize: !!python/tuple [7,7]
+      atlas_tag_outside: True
