@@ -1,8 +1,9 @@
 from puma import Roc, RocPlot
-from puma.metrics import calc_rej
+from puma.metrics import calc_eff, calc_rej
 from plotter.config_dict import ConfigDict
 import h5py
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 from plotter.plot_classes.plotbase import PlotBase
 
@@ -28,12 +29,15 @@ class RocPlotBase(PlotBase):
                 ds = hdf_file[sample_config.df_name]
 
                 target_label = self.config.target_label
-                tagger_output = self.config.tagger_output
+
+                # get attribute name for GNN ej score
+                keys_list = list(ds.dtype.fields.keys())
+                pDisp = keys_list[-2]
 
                 df = pd.DataFrame(
                     {
                         target_label: np.array(ds[target_label]).transpose(),
-                        tagger_output: np.array(ds[tagger_output]).transpose(),
+                        pDisp: np.array(ds[pDisp]).transpose(),
                     }
                 )
                 df = df.dropna()
@@ -48,7 +52,7 @@ class RocPlotBase(PlotBase):
                 n_pu = sum(is_pu)
 
                 rej = calc_rej(
-                    df[is_hs]["GN2ej_pdispjet"].values, df[is_pu]["GN2ej_pdispjet"].values, sig_eff
+                    df[is_hs][pDisp].values, df[is_pu][pDisp].values, sig_eff
                 )
 
                 # here the plotting of the roc starts
@@ -64,5 +68,52 @@ class RocPlotBase(PlotBase):
                 )
                 roc_plot.set_ratio_class(1, "qcd")
 
+                # add cut values and background rejections if desired
+                if self.config.show_cuts == True:
+                    # calculate the efficiencies for the specific cut values
+                    if self.config.cut_values is not None:
+                        cut_values = self.config.cut_values
+
+                    sig_disc = df[is_hs][pDisp]     # convenient to store signal discriminants
+                    N_signal = len(sig_disc)
+
+                    cut_effs = []   # initialize array to store efficiencies from cut values
+                    cut_rejs = []   # initialize array to store corresponding bkg effs from cuts
+
+                    for cut in cut_values:
+                        true_pos = sig_disc[sig_disc >= cut]    # determine the signal that passes the cut
+                        eff_ = len(true_pos)/N_signal
+                        rej_ = calc_rej(
+                            df[is_hs][pDisp].values, df[is_pu][pDisp].values, eff_
+                        )
+                        cut_effs.append(eff_)
+                        cut_rejs.append(rej_)
+
+                    # plot the cuts and the corresponding bkg rejs
+                    markers = ['o', 'v', 's', 'P', 'X', 'd']
+                    for i in range(len(cut_values)):
+                        roc_plot.axis_top.scatter(
+                            cut_effs[i], 
+                            cut_rejs[i], 
+                            s = 75,
+                            marker = markers[i],
+                            facecolors = list(roc_plot.label_colours.values())[-1],
+                            edgecolors = 'black',
+                            alpha=0.6,
+                            label = "cut = {0:.3f}, rej. = {1:.2e}".format(cut_values[i], cut_rejs[i]),
+                            zorder = 99
+                        )
+
         roc_plot.draw()
+
+        # remove the previous legend
+        roc_plot.axis_top.get_legend().remove()
+
+        # update the legend
+        if self.config.show_cuts == True:
+            roc_plot.axis_top.legend(fontsize=8, loc='upper left', bbox_to_anchor=(1,1))
+        else:
+            roc_plot.axis_top.legend()
+
+
         roc_plot.savefig(self.config.file_name, transparent=False)
