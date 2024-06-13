@@ -32,7 +32,12 @@ class RocPlotBase(PlotBase):
 
                 # get attribute name for GNN ej score
                 keys_list = list(ds.dtype.fields.keys())
-                pDisp = keys_list[-2]
+
+                # search for which key contains the GNN signal discriminant
+                for i, key in enumerate(keys_list):
+                    if "pdisp" in key:
+                        pDisp = keys_list[i]
+                        break
 
                 df = pd.DataFrame(
                     {
@@ -69,7 +74,7 @@ class RocPlotBase(PlotBase):
                 roc_plot.set_ratio_class(1, "qcd")
 
                 # add cut values and background rejections if desired
-                if self.config.show_cuts == True:
+                if self.config.show_cuts:
                     # calculate the efficiencies for the specific cut values
                     if self.config.cut_values is not None:
                         cut_values = self.config.cut_values
@@ -91,6 +96,10 @@ class RocPlotBase(PlotBase):
 
                     # plot the cuts and the corresponding bkg rejs
                     markers = ['o', 'v', 's', 'P', 'X', 'd']
+
+                    assert len(cut_values) <= len(markers), \
+                    f"RocPlotBase: too many cut values to plot, only {len(markers)} or less per ROC curve"
+
                     for i in range(len(cut_values)):
                         roc_plot.axis_top.scatter(
                             cut_effs[i], 
@@ -110,7 +119,7 @@ class RocPlotBase(PlotBase):
         roc_plot.axis_top.get_legend().remove()
 
         # update the legend
-        if self.config.show_cuts == True:
+        if self.config.show_cuts:
             roc_plot.axis_top.legend(fontsize=8, loc='upper left', bbox_to_anchor=(1,1))
         else:
             roc_plot.axis_top.legend()
