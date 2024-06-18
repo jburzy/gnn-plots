@@ -42,7 +42,9 @@ plots:
     samples:  # specify specific sample here
       path: '/path/to/file'
       colour: mediumblue
+      df_name: tracks_from_jet
     filename: NumVertCompare.png
+    disp_only: False # choose to plot displaced tracks in signal samples only
     max_val: 25
     style:
       <<: *style
