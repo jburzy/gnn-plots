@@ -161,18 +161,33 @@ class NumVertComparePlotBase(PlotBase):
 		sample_config = ConfigDict(self.config.samples)
 		with h5py.File(sample_config.path, "r") as hdf_file:
 			# track information data (cannot store in dataframe)
-			ds_tfj = hdf_file["tracks_from_jet"]
+			ds_jet = hdf_file["jets"]
+			ds_tfj = hdf_file[sample_config.df_name]
 
 			# DETERMINE THE NUMBER OF TRUE VERTICES IN EACH SAMPLE
 			# ----------------------------------------------------
 			# truthVertexIndex ndarray
-			truthVI = np.asarray(ds_tfj["truthVertexIndex"])
-			predVI = np.asarray(ds_tfj["VertexIndex"])
-			valid = np.asarray(ds_tfj["valid"])
-			pred_pileup = ds_tfj["pileup"]
-			pred_fake = ds_tfj["fake"]
-			pred_prompt = ds_tfj["prompt"]
-			pred_disp = ds_tfj["displaced"]
+			if self.config.disp_only:
+				# obtain signal only jets
+				is_disp = np.array(ds_jet["isDisplaced"] == 1)
+				truthVI = np.asarray(ds_tfj["truthVertexIndex"])[is_disp]
+				truthOrigin = np.asarray(ds_tfj["truthOriginLabel"])[is_disp]
+				predVI = np.asarray(ds_tfj["VertexIndex"])[is_disp]
+				valid = np.asarray(ds_tfj["valid"])[is_disp]
+				pred_pileup = ds_tfj["pileup"][is_disp]
+				pred_fake = ds_tfj["fake"][is_disp]
+				pred_prompt = ds_tfj["prompt"][is_disp]
+				pred_disp = ds_tfj["displaced"][is_disp]
+			else:
+				# use all jets, both bkg and signal
+				truthVI = np.asarray(ds_tfj["truthVertexIndex"])
+				truthOrigin = np.asarray(ds_tfj["truthOriginLabel"])
+				predVI = np.asarray(ds_tfj["VertexIndex"])
+				valid = np.asarray(ds_tfj["valid"])
+				pred_pileup = ds_tfj["pileup"]
+				pred_fake = ds_tfj["fake"]
+				pred_prompt = ds_tfj["prompt"]
+				pred_disp = ds_tfj["displaced"]
 
 			# initialize lists to store number of unique vertices
 			true_num_vert = []
@@ -182,7 +197,14 @@ class NumVertComparePlotBase(PlotBase):
 			for i in range(len(truthVI)):
 				# calculate number of true unique vertexes in each sample
 				true_current = truthVI[i]
-				true_num_vert.append(len(np.unique(true_current[true_current >= 0])))
+
+				# determine number of unique true dipslaced vertices
+				if self.config.disp_only:
+					origin_current = truthOrigin[i]
+					true_num_vert.append(len(np.unique(true_current[origin_current == 3])))
+				# determine number of unique true displaced and prompt vertices
+				else:
+					true_num_vert.append(len(np.unique(true_current[true_current >= 0])))
 
 				# calculate number of predicted unique vertexes in each sample
 				pred_current = predVI[i][valid[i]]
@@ -194,9 +216,14 @@ class NumVertComparePlotBase(PlotBase):
 				valid_pred = []	# list of tracks that are predicted to originate from prompt or displaced
 				for j in range(len(pred_current)):
 					origin = max(pu[j], fk[j], pr[j], dp[j])
-					# only append vertex if it is prompt or displaced
-					if origin == pr[j] or origin == dp[j]:
-						valid_pred.append(pred_current[j])
+					# determine number of unique predicted displaced vertices
+					if self.config.disp_only:
+						if origin == dp[j]:
+							valid_pred.append(pred_current[j])
+					# determine number of unique displaced and prompt vertices
+					else:
+						if origin == pr[j] or origin == dp[j]:
+							valid_pred.append(pred_current[j])
 
 				pred_num_vert.append(len(np.unique(valid_pred)))
 
@@ -206,7 +233,6 @@ class NumVertComparePlotBase(PlotBase):
 
 			# PLOT THE MAIN DATA IN A SUBFIGURE
 			# ----------------------------
-			row, col = sample_config.gridspec_pos
 			ax_main = fig.add_subplot(gs[1, 0])
 
 			h = ax_main.hist2d(
