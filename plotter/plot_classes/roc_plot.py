@@ -7,16 +7,26 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from plotter.plot_classes.plotbase import PlotBase
 
+def sci_notation_latex(x, precision=1):
+    coeff = f"{x:.{precision}e}"
+    base, exp = coeff.split("e")
+    return rf"{base} \times 10^{{{int(exp):d}}}"
 
 class RocPlotBase(PlotBase):
     def plot(self):
         required_params = {
             "n_ratio_panels",
+            "ymin",
             "ylabel",
             "xlabel",
+            "atlas_first_tag",
             "atlas_second_tag",
             "figsize",
             "y_scale",
+            "label_fontsize",
+            "fontsize",
+            "atlas_fontsize",
+            "grid"
         }
         filtered_params = {
             key: value for key, value in self.config.style.items() if key in required_params
@@ -25,6 +35,7 @@ class RocPlotBase(PlotBase):
 
         for _, sample in self.config.samples.items():
             sample_config = ConfigDict(sample)
+            print(sample_config.path)
             with h5py.File(sample_config.path, "r") as hdf_file:
                 ds = hdf_file[sample_config.df_name]
 
@@ -71,7 +82,7 @@ class RocPlotBase(PlotBase):
                     ),
                     reference=sample_config.reference,
                 )
-                roc_plot.set_ratio_class(1, "qcd")
+                # roc_plot.set_ratio_class(1, "qcd")
 
                 # add cut values and background rejections if desired
                 if self.config.show_cuts:
@@ -95,34 +106,44 @@ class RocPlotBase(PlotBase):
                         cut_rejs.append(rej_)
 
                     # plot the cuts and the corresponding bkg rejs
-                    markers = ['o', 'v', 's', 'P', 'X', 'd']
+                    markers = ['*', 'v', 's', 'P', 'X', 'd']
 
                     assert len(cut_values) <= len(markers), \
                     f"RocPlotBase: too many cut values to plot, only {len(markers)} or less per ROC curve"
 
                     for i in range(len(cut_values)):
+                        cut = cut_values[i]
+                        eff = cut_effs[i]
+                        rej = cut_rejs[i]
+                        rej_str = sci_notation_latex(rej)
+
                         roc_plot.axis_top.scatter(
                             cut_effs[i], 
                             cut_rejs[i], 
-                            s = 75,
+                            s = 120,
                             marker = markers[i],
                             facecolors = list(roc_plot.label_colours.values())[-1],
                             edgecolors = 'black',
-                            alpha=0.6,
-                            label = "cut = {0:.3f}, rej. = {1:.2e}".format(cut_values[i], cut_rejs[i]),
+                            alpha=0.7,
+                            label = f"$p_{{\mathrm{{EJ}}}} > {cut:.2f}$:\n$\mathrm{{efficiency}}={eff:.3f}$\n$\mathrm{{rejection}}=2600$",
+                            # label = r"$P_{{\\mathrm_{EJ}}}>$ {0:.2f}, rej. = {1:.2e}".format(cut_values[i], cut_rejs[i]),
                             zorder = 99
                         )
+        
+        roc_plot.reference_label = self.config.reference_label
 
         roc_plot.draw()
+
+        handles, labels = roc_plot.axis_top.get_legend_handles_labels()
 
         # remove the previous legend
         roc_plot.axis_top.get_legend().remove()
 
         # update the legend
-        if self.config.show_cuts:
-            roc_plot.axis_top.legend(fontsize=8, loc='upper left', bbox_to_anchor=(1,1))
+        if not self.config.leg_inside:
+            roc_plot.axis_top.legend(handles[::-1], labels[::-1], fontsize=self.config.leg_fontsize, loc='upper left', frameon=False, bbox_to_anchor=(1,1))
         else:
-            roc_plot.axis_top.legend()
+            roc_plot.axis_top.legend(handles[::-1], labels[::-1], fontsize=self.config.leg_fontsize, frameon=False)
 
 
         roc_plot.savefig(self.config.file_name, transparent=False)

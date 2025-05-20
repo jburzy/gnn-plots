@@ -1,0 +1,32 @@
+output_dir: output
+
+samples: &samples
+  path: '/project/def-mdanning/rhall02/salt/salt/logs/GN3ej-fold0_20240722-T162121/ckpts/epoch=010-val_loss=0.02672__test_pp_output_val.h5'
+  label: 'GN3ej'
+
+style: &style
+  ylabel: ""
+  xlabel: ""
+  figsize: !!python/tuple [7, 5]
+  logy: True
+  use_atlas_tag: True
+  atlas_second_tag: "$\\sqrt{{s}}=13.6$ TeV"
+  y_scale: 1.0
+  fontsize: 15
+  label_fontsize: 15
+  dpi: 300
+
+plots:
+  discrim:
+    class: plotter.plot_classes.discrim_plot.DiscrimPlotBase
+    samples: *samples
+    low: 0.00
+    high: 1.00
+    dx: 0.01
+    file_name: discrim_right.png
+    style:
+      <<: *style
+      n_ratio_panels: 1
+      ylabel: "Normalized number of jets"
+      xlabel: "GNN Discriminant"
+      y_scale: 1.3

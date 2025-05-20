@@ -39,7 +39,8 @@ class JetPtPerfPlotBase(PlotBase):
 			mode="bkg_rej",
 			ylabel="QCD jet rejection",
 			xlabel=r"$p_{T}$ [TeV]",
-			logy=False,
+			logy=True,
+			ymin=500,
 			**filtered_params
 		)
 

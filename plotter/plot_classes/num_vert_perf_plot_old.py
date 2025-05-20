@@ -152,6 +152,12 @@ class NumVertComparePlotBase(PlotBase):
 		}
 
 
+		# CONSTRUCTING THE FIGURE
+		# -----------------------
+		fig = plt.figure(figsize=filtered_params["figsize"], dpi=filtered_params["dpi"])
+		gs = gridspec.GridSpec(2, 2, wspace=0.15, hspace=0.15, width_ratios=[4,1], height_ratios=[1,4])
+
+
 		# EXTRACT THE DATA
 		# ----------------
 		sample_config = ConfigDict(self.config.samples)
@@ -229,48 +235,78 @@ class NumVertComparePlotBase(PlotBase):
 
 			# PLOT THE MAIN DATA IN A SUBFIGURE
 			# ----------------------------
-			plt.figure(figsize=filtered_params["figsize"], dpi=filtered_params["dpi"])
+			ax_main = fig.add_subplot(gs[1, 0])
 
-			atlasify("Simulation Internal", "$\sqrt{s}=13.6$ TeV, 51.8 fb$^{-1}$", 
-					font_size=filtered_params["fontsize"]+2, 
-					label_font_size=filtered_params["fontsize"]+2, 
-					sub_font_size=filtered_params["fontsize"])
+			atlasify("Simulation Internal", "$\sqrt{s}=13.6$ TeV, 51.8 fb$^{-1}$", font_size=14, label_font_size=14, sub_font_size=12)
 
-			h, xedges, yedges, im = plt.hist2d(
+			h, xedges, yedges, im = ax_main.hist2d(
 				true_num_vert, 
 				pred_num_vert, 
 				bins=[np.arange(-0.5,max(true_num_vert)+1.5,1), np.arange(-0.5,max(pred_num_vert)+1.5,1)],
 				cmap="Blues",
-				density=False
+				density=True
 			)
-			plt.plot(
+			ax_main.plot(
 				[min(true_num_vert), max(true_num_vert)], 
 				[min(true_num_vert), max(true_num_vert)],
 				"k-"
 			)
 
-			# Keep aspect ratio square
-			plt.gca().set_aspect('equal')
-
 			# main plot settings
 			max_val = self.config.max_val
 			xyticks = np.arange(0,max_val+1,5)
 
-			plt.xlim(0,max_val)
-			plt.ylim(0,max_val)
+			ax_main.set_xlim(0,max_val)
+			ax_main.set_ylim(0,max_val)
 
-			plt.xticks(xyticks)
-			plt.yticks(xyticks)
-			plt.xlabel("True number of vertices ", fontsize=filtered_params["fontsize"]+2, loc="right")
-			plt.ylabel("Predicted number of vertices ", fontsize=filtered_params["fontsize"]+2, loc="top")
-			plt.minorticks_on()
-			plt.tick_params(labelsize=filtered_params["fontsize"])
+			ax_main.set_xticks(xyticks)
+			ax_main.set_yticks(xyticks)
+			ax_main.set_xlabel("True number of vertices", fontsize=filtered_params["fontsize"])
+			ax_main.set_ylabel("Predicted number of vertices", fontsize=filtered_params["fontsize"])
+			ax_main.minorticks_on()
+			ax_main.tick_params(labelsize=filtered_params["fontsize"])
 
-			cbar = plt.colorbar(im, shrink=0.85)
+			
+			# insert colorbar inside the plot
+			cax = inset_axes(ax_main, width="5%", height="70%", loc="center right", borderpad=1)#  bbox_to_anchor=(0.8, 0.1, 0.05, 0.8), bbox_transform=ax_main.transAxes)
 
-			cbar.set_label("Number of jets", fontsize=filtered_params["fontsize"], rotation=270, labelpad=18)
+			cbar = plt.colorbar(im, cax=cax)
 
-			cbar.ax.tick_params(labelsize=filtered_params["fontsize"])  # Set colorbar tick label size
+			# cbar.set_label("Number of jets", fontsize=filtered_params["fontsize"], rotation=270, labelpad=10)
+
+			# PLOT THE TRUE VERTEX INDICES HISTOGRAM
+			# --------------------------------------
+			ax_true = fig.add_subplot(gs[0,0])
+			ax_true.hist(true_num_vert, 
+				bins=np.arange(-0.5,max(true_num_vert)+1.5,1), 
+				density=True,
+				color='blue',
+				alpha=0.75
+				)
+			# true vertex histogram plot settings
+			ax_true.set_xlim(0,max_val)
+			ax_true.set_xticks(xyticks)
+			ax_true.minorticks_on()
+			ax_true.tick_params(which="both", axis="both", direction="in", left=True, right=True, top=True, bottom=True)
+			ax_true.tick_params(labelsize=filtered_params["fontsize"])
+
+
+			# PLOT THE PREDICTED VERTEX INDICES HISTOGRAM
+			# -------------------------------------------
+			ax_pred = fig.add_subplot(gs[1,1])
+			ax_pred.hist(pred_num_vert, 
+				bins=np.arange(-0.5,max(pred_num_vert)+1.5,1), 
+				density=True,
+				orientation="horizontal", 
+				color='blue',
+				alpha=0.75)
+			# predicted vertex histogram plot settings
+			ax_pred.set_ylim(0,max_val)
+			ax_pred.set_yticks(xyticks)
+			ax_pred.minorticks_on()
+			ax_pred.tick_params(which="both", axis="both", direction="in", left=True, right=True, top=True, bottom=True)
+			ax_pred.tick_params(labelsize=filtered_params["fontsize"])
+
 
 			plt.savefig(self.config.filename, 
 				dpi=filtered_params["dpi"],
