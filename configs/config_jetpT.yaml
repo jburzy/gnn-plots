@@ -1,9 +1,22 @@
 output_dir: output
 
 samples: &samples
-  GN2ej:
-    path: '/home/randon_h/gnnej/gnn-plots/data/epoch=008-val_loss=0.02631__test_pp_output_val.h5'
-    label: 'GN2ej sample'
+  one:
+    path: '/project/def-mdanning/rhall02/salt/salt/logs/GN3ej-fold1_20240722-T164135/ckpts/epoch=009-val_loss=0.02734__test_pp_output_val.h5'
+    label: 'GN3ej'
+  # two:
+  #   path: '/project/def-mdanning/rhall02/salt/salt/logs/mc23-fold0-gnn-count/GN3ej_20240613-T111915/ckpts/epoch=010-val_loss=0.02255__test_pp_output_val.h5'
+  #   label: 'fold0 old'
+  # three:
+  #   path: '/project/def-mdanning/rhall02/salt/salt/logs/gnn-layer-count/GN2ej_4_20240611-T092747/ckpts/epoch=012-val_loss=0.02329__test_pp_output_val.h5'
+  #   label: 'mc23, GN3ej 4 layers'
+  # four:
+  #   path: '/project/def-mdanning/rhall02/salt/salt/logs/gnn-layer-count/GN2ej_3_20240610-T114657/ckpts/epoch=009-val_loss=0.02301__test_pp_output_val.h5'
+  #   label: 'mc23, GN3ej 3 layers'
+  # five:
+  #   path: '/project/def-mdanning/rhall02/salt/salt/logs/gnn-layer-count/GN2ej_2_20240611-T092747/ckpts/epoch=012-val_loss=0.02351__test_pp_output_val.h5'
+  #   label: 'mc23, GN3ej 2 layers'
+
 
 style: &style
   ylabel: ""
@@ -22,10 +35,10 @@ plots:
     samples: *samples
     sig_eff_filename: EJ_eff_vs_jetpT.png
     bkg_rej_filename: QCD_rej_vs_jetpT.png
-    working_point: 0.95
-    binedges: [0.2,0.3,0.4,0.5,0.6,0.8,1.2,2.25]  # in TeV
+    working_point: 0.99
+    binedges: [0.2,0.3,0.4,0.6,0.8,1.2,2.25]  # in TeV
     sig_eff_leg_loc: lower right
-    bkg_rej_leg_loc: upper right
+    bkg_rej_leg_loc: upper left
     style:
       <<: *style
       grid: True

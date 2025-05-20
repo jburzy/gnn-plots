@@ -3,7 +3,6 @@ from puma.matshow import MatshowPlot
 from plotter.config_dict import ConfigDict
 import h5py
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from plotter.plot_classes.plotbase import PlotBase
 
@@ -39,7 +38,7 @@ class ConfMatPlotBase(PlotBase):
 		with h5py.File(sample.path, "r") as hdf_file:
 			task_type = self.config.task_type
 
-			ds_tfj = hdf_file['tracks_from_jet']
+			ds_tfj = hdf_file[sample.df_name]
 
 			valid = np.array(ds_tfj['valid'])
 

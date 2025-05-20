@@ -56,9 +56,11 @@ class DiscrimPlotBase(PlotBase):
 			plot_histo = HistogramPlot(
 				bins=np.arange(0,1.001,0.01),
 				n_ratio_panels=0,
-				xlabel="GN2ej score",
+				xlabel="GN3ej score",
 				ylabel="Normalized number of jets",
 				leg_ncol=1,
+				xmin=self.config.low,
+				xmax=self.config.high,
 				**filtered_params
 			)
 
